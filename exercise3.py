@@ -10,29 +10,21 @@ import time
 
 URL = "https://www.divan.ru/category/divany?sort=4"
 
-
 def get_prices():
-    # Настраиваем Selenium под Firefox
+    # Настройка Selenium для Firefox
     options = webdriver.FirefoxOptions()
-    
     driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=options)
 
     driver.get(URL)
-    time.sleep(5)  # ждём загрузку динамического контента
+    time.sleep(5)  # ждем подгрузку контента
 
     prices = []
-    # каждый блок с ценой
-    price_elements = driver.find_elements(By.CSS_SELECTOR, ".product-card__price")
+
+    # Собираем все элементы с актуальными ценами
+    price_elements = driver.find_elements(By.CSS_SELECTOR, "span.ui-LD-ZU")
 
     for elem in price_elements:
-        try:
-            # пробуем взять акционную цену
-            disc = elem.find_element(By.CSS_SELECTOR, ".product-card__price--discounted")
-            text = disc.text
-        except:
-            # если её нет — берём любую цену
-            text = elem.text
-
+        text = elem.text.strip()
         match = re.search(r"([\d\s]+)", text)
         if match:
             num = int(match.group(1).replace(" ", ""))
@@ -41,7 +33,6 @@ def get_prices():
     driver.quit()
     return prices
 
-
 def save_to_csv(prices, filename="divan_prices.csv"):
     with open(filename, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
@@ -49,15 +40,15 @@ def save_to_csv(prices, filename="divan_prices.csv"):
         for p in prices:
             writer.writerow([p])
 
-
 def load_and_analyze(filename="divan_prices.csv"):
     df = pd.read_csv(filename)
     df["price"] = pd.to_numeric(df["price"], errors="coerce")
     df = df.dropna(subset=["price"])
     mean_price = df["price"].mean()
     print(f"Средняя цена дивана: {mean_price:.2f} руб.")
-    # Строим гистограмму
-    plt.figure(figsize=(10, 6))
+
+    # Строим гистограмму цен
+    plt.figure(figsize=(10,6))
     plt.hist(df["price"], bins=30, color='skyblue', edgecolor='black')
     plt.title("Гистограмма цен на диваны (руб.)")
     plt.xlabel("Цена, руб.")
@@ -66,7 +57,6 @@ def load_and_analyze(filename="divan_prices.csv"):
     plt.tight_layout()
     plt.show()
 
-
 def main():
     prices = get_prices()
     if not prices:
@@ -74,7 +64,6 @@ def main():
         return
     save_to_csv(prices)
     load_and_analyze()
-
 
 if __name__ == "__main__":
     main()
